@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq; // Add this to use Linq functionalities such as Contains
 using UnityEngine;
 
 public class SongControl : MonoBehaviour
@@ -9,74 +8,119 @@ public class SongControl : MonoBehaviour
     public AudioSource musicSource; // Assign the music AudioSource in the inspector
 
     public float beatDuration = 1.0f; // Duration of a beat in seconds
+    private float subdivision; // Duration of a subdivision in seconds
     private AudioSource audioSource;
 
-    private bool isListenPhase = false; // Indicates if it's the phase where the game generates rhythm
-    private int beatCounter = 0; // Starts at -2 to account for the initial 2 beat delay
-    private bool[] rhythmPattern = new bool[4]; // Stores the generated rhythm for the current cycle
+    private int beatCounter = 0; // Tracks the current beat within a cycle
+    private int cycleCounter = 0; // Tracks the number of completed cycles
+    private int subdivisionCounter = 0; // Tracks the subdivisions within a beat
+
+    private HashSet<int> possibleSubdivisions = new HashSet<int>(); // Stores possible subdivisions for rhythm
+
+    private enum RhythmType { Quarter, Eighth, Sixteenth }
+    private RhythmType rhythmType = RhythmType.Quarter;
 
     void Start()
     {
-        // Get the AudioSource component attached to this GameObject for quarter note sounds
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null || audioSource == musicSource)
         {
-            // If there isn't one already, or if it's the same as musicSource, add an AudioSource component dynamically
             audioSource = gameObject.AddComponent<AudioSource>();
         }
 
-        // Start the rhythm cycle
+        subdivision = beatDuration / 4;
         StartCoroutine(RhythmAndMusicCycle());
     }
 
     IEnumerator RhythmAndMusicCycle()
     {
-        yield return new WaitForSeconds(beatDuration * 2); // Initial 2-beat delay
-        musicSource.Play(); // Start playing the music
+        yield return new WaitForSeconds(beatDuration * 2);
+
+        // Generate the first rhythm
+        HandleRhythmGeneration();
+        IncrementCounters();
+
+        // Now start the music
+        musicSource.Play();
         Debug.Log("Music started at: " + Time.time);
 
-        float nextBeatTime = musicSource.time + beatDuration; // Time for the next beat
+        float nextSubdivisionTime = musicSource.time + subdivision;
 
         while (true)
         {
-            float currentTime = musicSource.time; // Current playback time
-            if (currentTime >= nextBeatTime)
+            float currentTime = musicSource.time;
+            if (currentTime >= nextSubdivisionTime)
             {
-                beatCounter = (beatCounter + 1) % 8;
-                Debug.Log("Current beatCounter: " + beatCounter + " at time: " + Time.time);
-
-                // Listen phase is only during the first half of the cycle (beats 0-3)
-                isListenPhase = beatCounter < 4;
-
-                if (isListenPhase && beatCounter >= 0)
-                {
-                    // Generate rhythm only during the listen phase
-                    bool playSound = Random.value > 0.5f;
-                    rhythmPattern[beatCounter] = playSound;
-
-                    // Ensure at least one sound plays during the listen phase
-                    if (beatCounter == 3 && !rhythmPattern.Contains(true))
-                    {
-                        playSound = true;
-                        rhythmPattern[3] = true;
-                    }
-
-                    if (playSound)
-                    {
-                        audioSource.PlayOneShot(quarterNoteSound);
-                    }
-                }
-
-                nextBeatTime += beatDuration;
+                HandleRhythmGeneration();
+                IncrementCounters();
+                nextSubdivisionTime += subdivision;
             }
 
-            yield return null; // Wait until the next frame
+            yield return null;
         }
     }
 
+    private void HandleRhythmGeneration()
+    {
+        UpdateRhythmType();
+        bool isListenPhase = beatCounter < 4;
 
+        if (isListenPhase)
+        {
+            int totalSubdivision = beatCounter * 4 + subdivisionCounter + 1;
+            if (possibleSubdivisions.Contains(totalSubdivision))
+            {
+                bool playSound = Random.value > 0.5f;
+                if (playSound)
+                {
+                    audioSource.PlayOneShot(quarterNoteSound);
+                }
+            }
+        }
+    }
 
+    private void UpdateRhythmType()
+    {
+        if (beatCounter == 0 && subdivisionCounter == 0)
+        {
+            Debug.Log("Starting cycle number: " + (cycleCounter + 1));
+            possibleSubdivisions.Clear(); // Clear previous rhythm type possible subdivisions
 
+            if (cycleCounter < 4)
+            {
+                rhythmType = RhythmType.Quarter;
+                possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
+            }
+            else if (cycleCounter < 8)
+            {
+                rhythmType = RhythmType.Eighth;
+                possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
+            }
+            else
+            {
+                rhythmType = RhythmType.Sixteenth;
+                for (int i = 1; i <= 16; i++)
+                {
+                    possibleSubdivisions.Add(i);
+                }
+            }
+        }
+    }
 
-
+    private void IncrementCounters()
+    {
+        subdivisionCounter++;
+        if (subdivisionCounter == 4)
+        {
+            subdivisionCounter = 0;
+            beatCounter++;
+            Debug.Log("Beat Counter: " + beatCounter);
+            if (beatCounter == 8)
+            {
+                cycleCounter++;
+                beatCounter = 0;
+                Debug.Log("Starting cycle number: " + (cycleCounter + 1));
+            }
+        }
+    }
 }
