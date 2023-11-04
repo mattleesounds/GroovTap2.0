@@ -59,13 +59,15 @@ public class RingMover : MonoBehaviour
 
     IEnumerator MoveSprite(GameObject sprite)
     {
+        Vector3 destroyPoint = Camera.main.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, Camera.main.nearClipPlane)); // Point just behind the camera
+
         while (sprite != null)
         {
             // Move the sprite towards the camera
             sprite.transform.position = Vector3.MoveTowards(sprite.transform.position, Camera.main.transform.position, speed * Time.deltaTime);
 
-            // Check if the sprite is behind the camera, then destroy it
-            if (Vector3.Dot(Camera.main.transform.forward, sprite.transform.position - Camera.main.transform.position) < 0)
+            // Check if the sprite is past the destroy point, then destroy it
+            if (Vector3.Distance(sprite.transform.position, destroyPoint) < 0.1f)
             {
                 Destroy(sprite);
             }
@@ -73,5 +75,6 @@ public class RingMover : MonoBehaviour
             yield return null;
         }
     }
+
 
 }
