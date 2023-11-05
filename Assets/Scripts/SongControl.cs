@@ -9,7 +9,7 @@ public class SongControl : MonoBehaviour
 
     public float beatDuration = 1.0f; // Duration of a beat in seconds
     private float subdivision; // Duration of a subdivision in seconds
-    private AudioSource audioSource;
+    public AudioSource audioSource;
 
     private int beatCounter = 0; // Tracks the current beat within a cycle
     private int cycleCounter = 0; // Tracks the number of completed cycles
@@ -17,6 +17,7 @@ public class SongControl : MonoBehaviour
 
     private HashSet<int> possibleSubdivisions = new HashSet<int>(); // Stores possible subdivisions for rhythm
 
+    private List<bool> listenStateRhythm = new List<bool>(); // Stores the rhythm for the listen state
     private enum RhythmType { Quarter, Eighth, Sixteenth }
     private RhythmType rhythmType = RhythmType.Quarter;
 
@@ -71,10 +72,15 @@ public class SongControl : MonoBehaviour
             if (possibleSubdivisions.Contains(totalSubdivision))
             {
                 bool playSound = Random.value > 0.5f;
+                listenStateRhythm.Add(playSound); // Update the list here
                 if (playSound)
                 {
                     audioSource.PlayOneShot(quarterNoteSound);
                 }
+            }
+            else
+            {
+                listenStateRhythm.Add(false); // Add false if no sound is played
             }
         }
     }
@@ -105,6 +111,23 @@ public class SongControl : MonoBehaviour
                 }
             }
         }
+    }
+
+    // Public method to get the rhythm of the listen state
+    public List<bool> GetListenStateRhythm()
+    {
+        return listenStateRhythm;
+    }
+
+    // Public method to determine if it's the listen phase
+    public bool IsListenPhase()
+    {
+        return beatCounter < 4;
+    }
+
+    public bool IsInitialized()
+    {
+        return listenStateRhythm.Count > 0;
     }
 
     private void IncrementCounters()
