@@ -7,17 +7,31 @@ public class RingMover : MonoBehaviour
     public GameObject ringPrefab;
     public GameObject listenPrefab;
     public GameObject tapPrefab;
+    public AudioSource musicSource; // Reference to the music source
 
     private float spawnDistance = 1000f; // Distance in front of the camera to spawn
     private float speed = 500f; // Speed at which the sprites move towards the camera
 
-
     private int spriteCounter = 0;
+    private float beatDuration = 1.0f; // Duration of a beat in seconds, should be the same as in SongControl
 
     void Start()
     {
-        // Start the sequence
+        // Calculate the time it takes for a ring to travel from spawnDistance to the camera
+        float travelTime = spawnDistance / speed;
+
+        // Start the sequence to spawn rings immediately
         StartCoroutine(SpawnSpriteSequence());
+
+        // Start the music with a delay equal to the travel time
+        StartCoroutine(StartMusicWithDelay(travelTime));
+    }
+
+    IEnumerator StartMusicWithDelay(float delay)
+    {
+        // Wait for the specified delay before starting the music
+        yield return new WaitForSeconds(delay);
+        musicSource.Play();
     }
 
     IEnumerator SpawnSpriteSequence()
@@ -46,10 +60,9 @@ public class RingMover : MonoBehaviour
             spriteCounter = (spriteCounter + 1) % 8;
 
             // Wait for the next sprite instantiation (adjust the time as needed)
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(beatDuration);
         }
     }
-
     GameObject InstantiateSprite(GameObject prefab)
     {
         Vector3 spawnPosition = Camera.main.transform.position + Camera.main.transform.forward * spawnDistance;
@@ -75,6 +88,4 @@ public class RingMover : MonoBehaviour
             yield return null;
         }
     }
-
-
 }

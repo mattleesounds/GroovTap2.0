@@ -41,8 +41,8 @@ public class SongControl : MonoBehaviour
         IncrementCounters();
 
         // Now start the music
-        musicSource.Play();
-        Debug.Log("Music started at: " + Time.time);
+        //musicSource.Play();
+        //Debug.Log("Music started at: " + Time.time);
 
         float nextSubdivisionTime = musicSource.time + subdivision;
 
