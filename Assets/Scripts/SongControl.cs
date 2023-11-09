@@ -4,59 +4,60 @@ using UnityEngine;
 
 public class SongControl : MonoBehaviour
 {
-    public AudioClip quarterNoteSound; // Assign this in the inspector with your sound
-    public AudioSource musicSource; // Assign the music AudioSource in the inspector
-
-    public float beatDuration = 1.0f; // Duration of a beat in seconds
-    private float subdivision; // Duration of a subdivision in seconds
+    public AudioClip quarterNoteSound;
+    public AudioSource musicSource;
     public AudioSource audioSource;
-
-    private int beatCounter = 0; // Tracks the current beat within a cycle
-    private int cycleCounter = 0; // Tracks the number of completed cycles
-    private int subdivisionCounter = 0; // Tracks the subdivisions within a beat
-
-    private HashSet<int> possibleSubdivisions = new HashSet<int>(); // Stores possible subdivisions for rhythm
-
-    private List<bool> listenStateRhythm = new List<bool>(); // Stores the rhythm for the listen state
+    public float beatDuration = 1.0f;
+    private float subdivision;
+    private int beatCounter = 0;
+    private int cycleCounter = 0;
+    private int subdivisionCounter = 0;
+    private HashSet<int> possibleSubdivisions = new HashSet<int>();
+    private List<bool> listenStateRhythm = new List<bool>();
     private enum RhythmType { Quarter, Eighth, Sixteenth }
     private RhythmType rhythmType = RhythmType.Quarter;
+    public List<double> expectedTapTimings = new List<double>(); // Use double for dspTime
+    // Pool of AudioSources to allow for rapid sound playback.
+    private List<AudioSource> audioSourcePool;
+    public int poolSize = 16; // Adjust pool size as needed
 
     void Start()
     {
+        InitializeAudioSourcePool();
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null || audioSource == musicSource)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
-
         subdivision = beatDuration / 4;
         StartCoroutine(RhythmAndMusicCycle());
+        StartCoroutine(StartMusicWithDelay(beatDuration * 2.0f));
     }
 
     IEnumerator RhythmAndMusicCycle()
     {
-        yield return new WaitForSeconds(beatDuration * 2);
+        // Wait for two beats before starting
+        yield return new WaitForSeconds((beatDuration * 2.0f) + 0.05f);
 
-        // Generate the first rhythm
+        // Start the rhythm generation
         HandleRhythmGeneration();
         IncrementCounters();
 
-        // Now start the music
-        //musicSource.Play();
-        //Debug.Log("Music started at: " + Time.time);
 
-        float nextSubdivisionTime = musicSource.time + subdivision;
+
+        // Calculate the next subdivision time
+        double nextSubdivisionTime = AudioSettings.dspTime + subdivision;
 
         while (true)
         {
-            float currentTime = musicSource.time;
+            double currentTime = AudioSettings.dspTime;
             if (currentTime >= nextSubdivisionTime)
             {
-                HandleRhythmGeneration();
+
                 IncrementCounters();
+                HandleRhythmGeneration();
                 nextSubdivisionTime += subdivision;
             }
-
             yield return null;
         }
     }
@@ -72,15 +73,19 @@ public class SongControl : MonoBehaviour
             if (possibleSubdivisions.Contains(totalSubdivision))
             {
                 bool playSound = Random.value > 0.5f;
-                listenStateRhythm.Add(playSound); // Update the list here
+                listenStateRhythm.Add(playSound);
                 if (playSound)
                 {
-                    audioSource.PlayOneShot(quarterNoteSound);
+                    // Calculate the dspTime for when the sound should play
+                    double nextSubdivisionDspTime = AudioSettings.dspTime + subdivision;
+
+                    // Play the sound at the calculated dspTime
+                    PlaySound(quarterNoteSound, nextSubdivisionDspTime);
+
+                    // Add the tap timing for scoring purposes
+                    expectedTapTimings.Add(nextSubdivisionDspTime + 4 * beatDuration);
+                    Debug.Log("Rhythm generated - scheduled sound at dspTime: " + nextSubdivisionDspTime);
                 }
-            }
-            else
-            {
-                listenStateRhythm.Add(false); // Add false if no sound is played
             }
         }
     }
@@ -90,36 +95,37 @@ public class SongControl : MonoBehaviour
         if (beatCounter == 0 && subdivisionCounter == 0)
         {
             Debug.Log("Starting cycle number: " + (cycleCounter + 1));
-            possibleSubdivisions.Clear(); // Clear previous rhythm type possible subdivisions
-
-            if (cycleCounter < 4)
+            possibleSubdivisions.Clear();
+            switch (cycleCounter)
             {
-                rhythmType = RhythmType.Quarter;
-                possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
-            }
-            else if (cycleCounter < 8)
-            {
-                rhythmType = RhythmType.Eighth;
-                possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
-            }
-            else
-            {
-                rhythmType = RhythmType.Sixteenth;
-                for (int i = 1; i <= 16; i++)
-                {
-                    possibleSubdivisions.Add(i);
-                }
+                case < 2:
+                    rhythmType = RhythmType.Quarter;
+                    possibleSubdivisions.UnionWith(new int[] { 5, 9, 13 });
+                    break;
+                case < 4:
+                    rhythmType = RhythmType.Quarter;
+                    possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
+                    break;
+                case < 8:
+                    rhythmType = RhythmType.Eighth;
+                    possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
+                    break;
+                default:
+                    rhythmType = RhythmType.Sixteenth;
+                    for (int i = 1; i <= 16; i++)
+                    {
+                        possibleSubdivisions.Add(i);
+                    }
+                    break;
             }
         }
     }
 
-    // Public method to get the rhythm of the listen state
     public List<bool> GetListenStateRhythm()
     {
         return listenStateRhythm;
     }
 
-    // Public method to determine if it's the listen phase
     public bool IsListenPhase()
     {
         return beatCounter < 4;
@@ -137,13 +143,67 @@ public class SongControl : MonoBehaviour
         {
             subdivisionCounter = 0;
             beatCounter++;
-            Debug.Log("Beat Counter: " + beatCounter);
             if (beatCounter == 8)
             {
                 cycleCounter++;
                 beatCounter = 0;
                 Debug.Log("Starting cycle number: " + (cycleCounter + 1));
+                listenStateRhythm.Clear();
+                expectedTapTimings.Clear();
             }
+        }
+    }
+
+    public List<double> GetExpectedTapTimings()
+    {
+        return expectedTapTimings;
+    }
+
+    IEnumerator StartMusicWithDelay(float delay)
+    {
+        // Wait for the specified delay before starting the music
+        yield return new WaitForSeconds(delay);
+        musicSource.Play();
+    }
+
+    private void InitializeAudioSourcePool()
+    {
+        audioSourcePool = new List<AudioSource>();
+
+        for (int i = 0; i < poolSize; i++)
+        {
+            AudioSource source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            audioSourcePool.Add(source);
+        }
+    }
+
+    private AudioSource GetPooledAudioSource()
+    {
+        foreach (AudioSource source in audioSourcePool)
+        {
+            if (!source.isPlaying)
+            {
+                return source;
+            }
+        }
+
+        // Optional: if all sources are playing and you want to force playing the new sound, return the first one.
+        // Be aware this will stop the sound currently playing on that source.
+        // return audioSourcePool[0];
+
+        // If all AudioSources are in use, log a warning or consider expanding your pool.
+        Debug.LogWarning("All audio sources are busy. Consider increasing pool size.");
+        return null;
+    }
+
+    private void PlaySound(AudioClip clip, double dspTime)
+    {
+        AudioSource sourceToUse = GetPooledAudioSource();
+        if (sourceToUse != null)
+        {
+            sourceToUse.clip = clip;
+            sourceToUse.PlayScheduled(dspTime);
         }
     }
 }

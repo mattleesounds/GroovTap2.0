@@ -18,24 +18,32 @@ public class RingMover : MonoBehaviour
     void Start()
     {
         // Calculate the time it takes for a ring to travel from spawnDistance to the camera
-        float travelTime = spawnDistance / speed;
+        double travelTime = spawnDistance / speed;
 
         // Start the sequence to spawn rings immediately
         StartCoroutine(SpawnSpriteSequence());
 
         // Start the music with a delay equal to the travel time
-        StartCoroutine(StartMusicWithDelay(travelTime));
+        StartCoroutine(StartMusicWithDelay((float)travelTime));
     }
 
     IEnumerator StartMusicWithDelay(float delay)
     {
-        // Wait for the specified delay before starting the music
-        yield return new WaitForSeconds(delay);
-        musicSource.Play();
-    }
+        // Convert the delay from float to double
+        double delayInSeconds = delay;
 
+        // Wait for the specified delay before starting the music
+        double startTime = AudioSettings.dspTime + delayInSeconds;
+        while (AudioSettings.dspTime < startTime)
+        {
+            yield return null;
+        }
+        //musicSource.Play();
+    }
     IEnumerator SpawnSpriteSequence()
     {
+        yield return new WaitForSeconds(0.2f);
+
         while (true) // Loop indefinitely
         {
             GameObject prefabToSpawn;
