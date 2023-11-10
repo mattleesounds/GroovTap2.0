@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using TMPro;
 
 public class PlayerInput : MonoBehaviour
 {
@@ -13,10 +14,15 @@ public class PlayerInput : MonoBehaviour
     private List<bool> playerTaps = new List<bool>();
     private bool isTapPhase = false;
     public AudioSource[] audioSourcePool; // Populate this with references to pre-existing AudioSource components
+    public TMP_Text scoreText; // Reference to the UI Text component
+
+    private int totalScore = 0; // This will hold the total score
+
 
     void Start()
     {
         InitializeAudioSourcePool(16); // Initialize pool with 16 AudioSource components
+        UpdateScoreText();
     }
     void Update()
     {
@@ -41,12 +47,15 @@ public class PlayerInput : MonoBehaviour
                 Debug.Log($"Correct tap! Score: {score}");
                 expectedTimings.Remove(expectedTimings.First(timing => System.Math.Abs(timing - tapTime) <= 0.1));
                 PlayTapSound(tapSound); // Play the tap sound using the pooled AudioSource system
+                totalScore++; // Increment the total score
             }
             else
             {
                 Debug.Log("Incorrect tap.");
                 PlayTapSound(tapSound);
+                totalScore--; // Decrement the total score
             }
+            UpdateScoreText();
             playerTaps.Add(correctTap);
         }
 
@@ -96,6 +105,13 @@ public class PlayerInput : MonoBehaviour
         for (int i = 0; i < poolSize; i++)
         {
             audioSourcePool[i] = gameObject.AddComponent<AudioSource>();
+        }
+    }
+    private void UpdateScoreText()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = $"{totalScore}";
         }
     }
 }
