@@ -23,5 +23,12 @@ public class DifficultyDropdown : MonoBehaviour
 
         // Optionally set a default value
         dropdown.value = 1; // 0 for Easy, 1 for Normal, 2 for Expert
+
+        dropdown.onValueChanged.AddListener(delegate { DifficultyChanged(dropdown); });
+    }
+
+    void DifficultyChanged(TMP_Dropdown changedDropdown)
+    {
+        GameSettings.Difficulty = changedDropdown.options[changedDropdown.value].text;
     }
 }

@@ -17,12 +17,13 @@ public class PlayerInput : MonoBehaviour
     public TMP_Text scoreText; // Reference to the UI Text component
 
     private int totalScore = 0; // This will hold the total score
-
+    private double correctTapBuffer = 0.125;
 
     void Start()
     {
         InitializeAudioSourcePool(16); // Initialize pool with 16 AudioSource components
         UpdateScoreText();
+        SetDifficultyBuffer(GameSettings.Difficulty);
     }
     void Update()
     {
@@ -39,13 +40,13 @@ public class PlayerInput : MonoBehaviour
             Debug.Log("Tap detected at time: " + tapTime);
 
             List<double> expectedTimings = songControl.GetExpectedTapTimings();
-            bool correctTap = expectedTimings.Any(timing => System.Math.Abs(timing - tapTime) <= 0.1);
+            bool correctTap = expectedTimings.Any(timing => System.Math.Abs(timing - tapTime) <= correctTapBuffer);
 
             if (correctTap)
             {
                 score++;
                 Debug.Log($"Correct tap! Score: {score}");
-                expectedTimings.Remove(expectedTimings.First(timing => System.Math.Abs(timing - tapTime) <= 0.1));
+                expectedTimings.Remove(expectedTimings.First(timing => System.Math.Abs(timing - tapTime) <= correctTapBuffer));
                 PlayTapSound(tapSound); // Play the tap sound using the pooled AudioSource system
                 totalScore++; // Increment the total score
             }
@@ -112,6 +113,25 @@ public class PlayerInput : MonoBehaviour
         if (scoreText != null)
         {
             scoreText.text = $"{totalScore}";
+        }
+    }
+
+    public void SetDifficultyBuffer(string difficulty)
+    {
+        switch (difficulty)
+        {
+            case "Easy":
+                correctTapBuffer = 0.2;
+                Debug.Log("Difficulty set to Easy");
+                break;
+            case "Normal":
+                correctTapBuffer = 0.125;
+                Debug.Log("Difficulty set to Normal");
+                break;
+            case "Expert":
+                correctTapBuffer = 0.08;
+                Debug.Log("Difficulty set to Expert");
+                break;
         }
     }
 }

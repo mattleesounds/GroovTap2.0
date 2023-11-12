@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class SongControl : MonoBehaviour
@@ -20,6 +21,7 @@ public class SongControl : MonoBehaviour
     // Pool of AudioSources to allow for rapid sound playback.
     private List<AudioSource> audioSourcePool;
     public int poolSize = 16; // Adjust pool size as needed
+    private bool tapGeneratedInCurrentPhase = false;
 
     void Start()
     {
@@ -73,6 +75,22 @@ public class SongControl : MonoBehaviour
             if (possibleSubdivisions.Contains(totalSubdivision))
             {
                 bool playSound = Random.value > 0.5f;
+
+                if (playSound)
+                {
+                    tapGeneratedInCurrentPhase = true; // Tap has been generated in this phase
+                }
+
+                // Determine the last possible subdivision for the current rhythm type
+                int lastSubdivision = GetLastPossibleSubdivision();
+
+                // Force a tap on the last possible subdivision if none have been generated
+                if (totalSubdivision == lastSubdivision && !tapGeneratedInCurrentPhase)
+                {
+                    playSound = true;
+                    tapGeneratedInCurrentPhase = true;
+                }
+
                 listenStateRhythm.Add(playSound);
                 if (playSound)
                 {
@@ -86,6 +104,11 @@ public class SongControl : MonoBehaviour
                     expectedTapTimings.Add(nextSubdivisionDspTime + 4 * beatDuration);
                     Debug.Log("Rhythm generated - scheduled sound at dspTime: " + nextSubdivisionDspTime);
                 }
+            }
+            else
+            {
+                // Reset the flag when transitioning out of the listen phase
+                tapGeneratedInCurrentPhase = false;
             }
         }
     }
@@ -204,6 +227,19 @@ public class SongControl : MonoBehaviour
         {
             sourceToUse.clip = clip;
             sourceToUse.PlayScheduled(dspTime);
+        }
+    }
+
+    private int GetLastPossibleSubdivision()
+    {
+        switch (rhythmType)
+        {
+            case RhythmType.Eighth:
+                return 15;
+            case RhythmType.Sixteenth:
+                return 16;
+            default: // Assuming Sixteenth is the default
+                return 13;
         }
     }
 }
