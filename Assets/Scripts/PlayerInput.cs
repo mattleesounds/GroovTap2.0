@@ -13,11 +13,13 @@ public class PlayerInput : MonoBehaviour
     private List<bool> listenStateRhythm;
     private List<bool> playerTaps = new List<bool>();
     private bool isTapPhase = false;
-    public AudioSource[] audioSourcePool; // Populate this with references to pre-existing AudioSource components
+    /* public AudioSource[] audioSourcePool; // Populate this with references to pre-existing AudioSource components */
+    public AudioSource tapSoundSource;
     public TMP_Text scoreText; // Reference to the UI Text component
 
     private int totalScore = 0; // This will hold the total score
     private double correctTapBuffer = 0.125;
+    private Queue<AudioSource> audioSourcePool;
 
     void Start()
     {
@@ -74,7 +76,7 @@ public class PlayerInput : MonoBehaviour
         score = 0; // Reset the score for the next cycle
     }
 
-    private void PlayTapSound(AudioClip clip)
+    /* private void PlayTapSound(AudioClip clip)
     {
         AudioSource sourceToUse = GetPooledAudioSource();
         if (sourceToUse != null)
@@ -85,9 +87,23 @@ public class PlayerInput : MonoBehaviour
         {
             Debug.LogWarning("No audio source available to play tap sound");
         }
+    } */
+
+    private void PlayTapSound(AudioClip clip)
+    {
+        AudioSource sourceToUse = GetPooledAudioSource();
+        if (sourceToUse != null)
+        {
+            Debug.Log("Playing tap sound on source: " + sourceToUse.GetInstanceID());
+            sourceToUse.PlayOneShot(clip);
+        }
+        else
+        {
+            Debug.LogWarning("No audio source available to play tap sound");
+        }
     }
 
-    private AudioSource GetPooledAudioSource()
+    /* private AudioSource GetPooledAudioSource()
     {
         foreach (var source in audioSourcePool)
         {
@@ -98,15 +114,41 @@ public class PlayerInput : MonoBehaviour
         }
         Debug.LogWarning("No audio source available to play tap sound");
         return null; // Or handle this case as needed
+    } */
+    private AudioSource GetPooledAudioSource()
+    {
+        if (audioSourcePool.Count > 0)
+        {
+            AudioSource source = audioSourcePool.Dequeue();
+            StartCoroutine(RequeueAudioSource(source));
+            return source;
+        }
+        else
+        {
+            Debug.LogWarning("No audio source available to play tap sound");
+            return null;
+        }
     }
 
-    private void InitializeAudioSourcePool(int poolSize)
+    /* private void InitializeAudioSourcePool(int poolSize)
     {
         audioSourcePool = new AudioSource[poolSize];
         for (int i = 0; i < poolSize; i++)
         {
             audioSourcePool[i] = gameObject.AddComponent<AudioSource>();
         }
+    } */
+    private void InitializeAudioSourcePool(int poolSize)
+    {
+        audioSourcePool = new Queue<AudioSource>();
+        for (int i = 0; i < poolSize; i++)
+        {
+            AudioSource newSource = gameObject.AddComponent<AudioSource>();
+            newSource.playOnAwake = false;
+            audioSourcePool.Enqueue(newSource);
+            Debug.Log("Added AudioSource to pool: " + newSource.GetInstanceID());
+        }
+        Debug.Log("Total AudioSources in pool: " + audioSourcePool.Count);
     }
     private void UpdateScoreText()
     {
@@ -121,17 +163,22 @@ public class PlayerInput : MonoBehaviour
         switch (difficulty)
         {
             case "Easy":
-                correctTapBuffer = 0.2;
+                correctTapBuffer = 0.15;
                 Debug.Log("Difficulty set to Easy");
                 break;
             case "Normal":
-                correctTapBuffer = 0.125;
+                correctTapBuffer = 0.1;
                 Debug.Log("Difficulty set to Normal");
                 break;
             case "Expert":
-                correctTapBuffer = 0.08;
+                correctTapBuffer = 0.05;
                 Debug.Log("Difficulty set to Expert");
                 break;
         }
+    }
+    private IEnumerator RequeueAudioSource(AudioSource source)
+    {
+        yield return new WaitWhile(() => source.isPlaying);
+        audioSourcePool.Enqueue(source);
     }
 }

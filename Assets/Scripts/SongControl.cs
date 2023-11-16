@@ -27,20 +27,32 @@ public class SongControl : MonoBehaviour
     {
         InitializeAudioSourcePool();
         audioSource = GetComponent<AudioSource>();
-        if (audioSource == null || audioSource == musicSource)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-        }
         subdivision = beatDuration / 4;
-        StartCoroutine(RhythmAndMusicCycle());
-        StartCoroutine(StartMusicWithDelay(beatDuration * 2.0f));
+        RingMover ringMover = FindObjectOfType<RingMover>();
+        //double musicStartDelay = ringMover.musicStartTime - AudioSettings.dspTime;
+        //StartCoroutine(StartMusicWithDelay((float)musicStartDelay));
+        musicSource.PlayScheduled(ringMover.musicStartTime);
+        double scheduledStartTime = ringMover.musicStartTime;
+
+        StartCoroutine(RhythmAndMusicCycle(scheduledStartTime));
+
     }
 
-    IEnumerator RhythmAndMusicCycle()
+    IEnumerator RhythmAndMusicCycle(double scheduledStartTime)
     {
         // Wait for two beats before starting
-        yield return new WaitForSeconds((beatDuration * 2.0f) + 0.05f);
+        //yield return new WaitForSeconds(delay);
 
+
+        /* while (AudioSettings.dspTime < ringMover.musicStartTime)
+    {
+        yield return null;
+    } */
+
+        while (AudioSettings.dspTime < scheduledStartTime)
+        {
+            yield return null;
+        }
         // Start the rhythm generation
         HandleRhythmGeneration();
         IncrementCounters();

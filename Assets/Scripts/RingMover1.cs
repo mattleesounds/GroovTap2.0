@@ -15,16 +15,22 @@ public class RingMover : MonoBehaviour
     private int spriteCounter = 0;
     private float beatDuration = 1.0f; // Duration of a beat in seconds, should be the same as in SongControl
 
+    public double musicStartTime;
+
     void Start()
     {
         // Calculate the time it takes for a ring to travel from spawnDistance to the camera
         double travelTime = spawnDistance / speed;
 
+
+
         // Start the sequence to spawn rings immediately
         StartCoroutine(SpawnSpriteSequence());
 
+        //musicStartTime = AudioSettings.dspTime + travelTime;
+
         // Start the music with a delay equal to the travel time
-        StartCoroutine(StartMusicWithDelay((float)travelTime));
+        /* StartCoroutine(StartMusicWithDelay((float)travelTime)); */
     }
 
     IEnumerator StartMusicWithDelay(float delay)
@@ -42,7 +48,8 @@ public class RingMover : MonoBehaviour
     }
     IEnumerator SpawnSpriteSequence()
     {
-        yield return new WaitForSeconds(0.3f);
+        //yield return new WaitForSeconds(0.3f);
+        bool firstSpriteSpawned = false;
 
         while (true) // Loop indefinitely
         {
@@ -60,15 +67,31 @@ public class RingMover : MonoBehaviour
                 prefabToSpawn = ringPrefab;
             }
 
+
+
             // Instantiate the sprite and start its movement
             GameObject spriteInstance = InstantiateSprite(prefabToSpawn);
             StartCoroutine(MoveSprite(spriteInstance));
 
+
+
             // Increment the counter and reset if it reaches 8
             spriteCounter = (spriteCounter + 1) % 8;
 
+            if (!firstSpriteSpawned)
+            {
+                firstSpriteSpawned = true;
+                musicStartTime = AudioSettings.dspTime + (beatDuration * 2) + 0.3; // Set the music start time when the first sprite is spawned
+            }
+
             // Wait for the next sprite instantiation (adjust the time as needed)
             yield return new WaitForSeconds(beatDuration);
+
+            /* if (firstSpriteSpawned)
+            {
+                musicStartTime = AudioSettings.dspTime;
+                // Do not reset firstSpriteSpawned to false here
+            } */
         }
     }
     GameObject InstantiateSprite(GameObject prefab)
