@@ -26,11 +26,6 @@ public class RingMover : MonoBehaviour
 
         // Start the sequence to spawn rings immediately
         StartCoroutine(SpawnSpriteSequence());
-
-        //musicStartTime = AudioSettings.dspTime + travelTime;
-
-        // Start the music with a delay equal to the travel time
-        /* StartCoroutine(StartMusicWithDelay((float)travelTime)); */
     }
 
     IEnumerator StartMusicWithDelay(float delay)
@@ -44,7 +39,6 @@ public class RingMover : MonoBehaviour
         {
             yield return null;
         }
-        //musicSource.Play();
     }
     IEnumerator SpawnSpriteSequence()
     {

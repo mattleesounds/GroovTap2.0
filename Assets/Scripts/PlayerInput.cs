@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using TMPro;
+using UnityEngine.SocialPlatforms.Impl;
 
 public class PlayerInput : MonoBehaviour
 {
@@ -13,7 +14,6 @@ public class PlayerInput : MonoBehaviour
     private List<bool> listenStateRhythm;
     private List<bool> playerTaps = new List<bool>();
     private bool isTapPhase = false;
-    /* public AudioSource[] audioSourcePool; // Populate this with references to pre-existing AudioSource components */
     public AudioSource tapSoundSource;
     public TMP_Text scoreText; // Reference to the UI Text component
 
@@ -60,6 +60,8 @@ public class PlayerInput : MonoBehaviour
             }
             UpdateScoreText();
             playerTaps.Add(correctTap);
+
+            ScoreKeeper.CurrentScore = totalScore; // Update the static score variable
         }
 
 
@@ -68,6 +70,7 @@ public class PlayerInput : MonoBehaviour
             CheckScore();
             playerTaps.Clear();
         }
+
     }
 
     private void CheckScore()
@@ -75,19 +78,6 @@ public class PlayerInput : MonoBehaviour
         Debug.Log("Final Score for this cycle: " + score);
         score = 0; // Reset the score for the next cycle
     }
-
-    /* private void PlayTapSound(AudioClip clip)
-    {
-        AudioSource sourceToUse = GetPooledAudioSource();
-        if (sourceToUse != null)
-        {
-            sourceToUse.PlayOneShot(clip);
-        }
-        else
-        {
-            Debug.LogWarning("No audio source available to play tap sound");
-        }
-    } */
 
     private void PlayTapSound(AudioClip clip)
     {
@@ -103,18 +93,6 @@ public class PlayerInput : MonoBehaviour
         }
     }
 
-    /* private AudioSource GetPooledAudioSource()
-    {
-        foreach (var source in audioSourcePool)
-        {
-            if (!source.isPlaying)
-            {
-                return source;
-            }
-        }
-        Debug.LogWarning("No audio source available to play tap sound");
-        return null; // Or handle this case as needed
-    } */
     private AudioSource GetPooledAudioSource()
     {
         if (audioSourcePool.Count > 0)
@@ -130,14 +108,6 @@ public class PlayerInput : MonoBehaviour
         }
     }
 
-    /* private void InitializeAudioSourcePool(int poolSize)
-    {
-        audioSourcePool = new AudioSource[poolSize];
-        for (int i = 0; i < poolSize; i++)
-        {
-            audioSourcePool[i] = gameObject.AddComponent<AudioSource>();
-        }
-    } */
     private void InitializeAudioSourcePool(int poolSize)
     {
         audioSourcePool = new Queue<AudioSource>();
@@ -163,15 +133,15 @@ public class PlayerInput : MonoBehaviour
         switch (difficulty)
         {
             case "Easy":
-                correctTapBuffer = 0.15;
+                correctTapBuffer = 0.2;
                 Debug.Log("Difficulty set to Easy");
                 break;
             case "Normal":
-                correctTapBuffer = 0.1;
+                correctTapBuffer = 0.15;
                 Debug.Log("Difficulty set to Normal");
                 break;
             case "Expert":
-                correctTapBuffer = 0.05;
+                correctTapBuffer = 0.1;
                 Debug.Log("Difficulty set to Expert");
                 break;
         }

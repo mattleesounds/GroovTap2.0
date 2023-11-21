@@ -19,7 +19,7 @@ public class SongControl : MonoBehaviour
     private RhythmType rhythmType = RhythmType.Quarter;
     public List<double> expectedTapTimings = new List<double>(); // Use double for dspTime
     // Pool of AudioSources to allow for rapid sound playback.
-    private List<AudioSource> audioSourcePool;
+    private Queue<AudioSource> audioSourcePool;
     public int poolSize = 16; // Adjust pool size as needed
     private bool tapGeneratedInCurrentPhase = false;
 
@@ -29,8 +29,6 @@ public class SongControl : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         subdivision = beatDuration / 4;
         RingMover ringMover = FindObjectOfType<RingMover>();
-        //double musicStartDelay = ringMover.musicStartTime - AudioSettings.dspTime;
-        //StartCoroutine(StartMusicWithDelay((float)musicStartDelay));
         musicSource.PlayScheduled(ringMover.musicStartTime);
         double scheduledStartTime = ringMover.musicStartTime;
 
@@ -40,15 +38,6 @@ public class SongControl : MonoBehaviour
 
     IEnumerator RhythmAndMusicCycle(double scheduledStartTime)
     {
-        // Wait for two beats before starting
-        //yield return new WaitForSeconds(delay);
-
-
-        /* while (AudioSettings.dspTime < ringMover.musicStartTime)
-    {
-        yield return null;
-    } */
-
         while (AudioSettings.dspTime < scheduledStartTime)
         {
             yield return null;
@@ -203,35 +192,28 @@ public class SongControl : MonoBehaviour
 
     private void InitializeAudioSourcePool()
     {
-        audioSourcePool = new List<AudioSource>();
+        audioSourcePool = new Queue<AudioSource>();
 
         for (int i = 0; i < poolSize; i++)
         {
             AudioSource source = gameObject.AddComponent<AudioSource>();
             source.playOnAwake = false;
-            audioSourcePool.Add(source);
+            audioSourcePool.Enqueue(source);
         }
     }
 
     private AudioSource GetPooledAudioSource()
     {
-        foreach (AudioSource source in audioSourcePool)
+        if (audioSourcePool.Count > 0)
         {
-            if (!source.isPlaying)
-            {
-                return source;
-            }
+            AudioSource source = audioSourcePool.Dequeue();
+            StartCoroutine(RequeueAudioSource(source));
+            return source;
         }
 
-        // Optional: if all sources are playing and you want to force playing the new sound, return the first one.
-        // Be aware this will stop the sound currently playing on that source.
-        // return audioSourcePool[0];
-
-        // If all AudioSources are in use, log a warning or consider expanding your pool.
         Debug.LogWarning("All audio sources are busy. Consider increasing pool size.");
         return null;
     }
-
     private void PlaySound(AudioClip clip, double dspTime)
     {
         AudioSource sourceToUse = GetPooledAudioSource();
@@ -253,5 +235,11 @@ public class SongControl : MonoBehaviour
             default: // Assuming Sixteenth is the default
                 return 13;
         }
+    }
+
+    private IEnumerator RequeueAudioSource(AudioSource source)
+    {
+        yield return new WaitWhile(() => source.isPlaying);
+        audioSourcePool.Enqueue(source);
     }
 }

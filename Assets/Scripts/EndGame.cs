@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class PauseGame : MonoBehaviour
+public class EndGame : MonoBehaviour
 {
-    public void StopGameAndLoadMenu()
+    public void DisplayScore()
     {
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("ScoreDisplay");
     }
 }
