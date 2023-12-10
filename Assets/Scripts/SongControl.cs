@@ -22,6 +22,9 @@ public class SongControl : MonoBehaviour
     private Queue<AudioSource> audioSourcePool;
     public int poolSize = 16; // Adjust pool size as needed
     private bool tapGeneratedInCurrentPhase = false;
+    private string Difficulty = "Easy";
+    private Camera mainCamera;
+    private Color defaultBackgroundColor;
 
     void Start()
     {
@@ -33,6 +36,11 @@ public class SongControl : MonoBehaviour
         double scheduledStartTime = ringMover.musicStartTime;
 
         StartCoroutine(RhythmAndMusicCycle(scheduledStartTime));
+        mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            defaultBackgroundColor = mainCamera.backgroundColor;
+        }
 
     }
 
@@ -103,7 +111,7 @@ public class SongControl : MonoBehaviour
 
                     // Add the tap timing for scoring purposes
                     expectedTapTimings.Add(nextSubdivisionDspTime + 4 * beatDuration);
-                    Debug.Log("Rhythm generated - scheduled sound at dspTime: " + nextSubdivisionDspTime);
+                    //Debug.Log("Rhythm generated - scheduled sound at dspTime: " + nextSubdivisionDspTime);
                 }
             }
             else
@@ -120,25 +128,76 @@ public class SongControl : MonoBehaviour
         {
             Debug.Log("Starting cycle number: " + (cycleCounter + 1));
             possibleSubdivisions.Clear();
-            switch (cycleCounter)
+            switch (Difficulty)
             {
-                case < 2:
-                    rhythmType = RhythmType.Quarter;
-                    possibleSubdivisions.UnionWith(new int[] { 5, 9, 13 });
-                    break;
-                case < 4:
-                    rhythmType = RhythmType.Quarter;
-                    possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
-                    break;
-                case < 8:
-                    rhythmType = RhythmType.Eighth;
-                    possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
-                    break;
-                default:
-                    rhythmType = RhythmType.Sixteenth;
-                    for (int i = 1; i <= 16; i++)
+                case "Easy":
                     {
-                        possibleSubdivisions.Add(i);
+                        switch (cycleCounter)
+                        {
+                            case < 2:
+                                rhythmType = RhythmType.Quarter;
+                                possibleSubdivisions.UnionWith(new int[] { 5, 9, 13 });
+                                break;
+                            case < 9:
+                                rhythmType = RhythmType.Quarter;
+                                possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
+                                break;
+                            default:
+                                rhythmType = RhythmType.Eighth;
+                                possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
+                                break;
+                        }
+                        break;
+                    }
+                case "Normal":
+                    {
+                        switch (cycleCounter)
+                        {
+                            case < 2:
+                                rhythmType = RhythmType.Quarter;
+                                possibleSubdivisions.UnionWith(new int[] { 5, 9, 13 });
+                                break;
+                            case < 5:
+                                rhythmType = RhythmType.Quarter;
+                                possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
+                                break;
+                            case < 13:
+                                rhythmType = RhythmType.Eighth;
+                                possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
+                                break;
+                            default:
+                                rhythmType = RhythmType.Sixteenth;
+                                for (int i = 1; i <= 16; i++)
+                                {
+                                    possibleSubdivisions.Add(i);
+                                }
+                                break;
+                        }
+                        break;
+                    }
+
+                case "Expert":
+                    switch (cycleCounter)
+                    {
+                        case < 2:
+                            rhythmType = RhythmType.Quarter;
+                            possibleSubdivisions.UnionWith(new int[] { 5, 9, 13 });
+                            break;
+                        case < 3:
+                            rhythmType = RhythmType.Quarter;
+                            possibleSubdivisions.UnionWith(new int[] { 1, 5, 9, 13 });
+                            break;
+                        case < 9:
+                            rhythmType = RhythmType.Eighth;
+                            possibleSubdivisions.UnionWith(new int[] { 1, 3, 5, 7, 9, 11, 13, 15 });
+                            break;
+                        default:
+                            rhythmType = RhythmType.Sixteenth;
+                            for (int i = 1; i <= 16; i++)
+                            {
+                                possibleSubdivisions.Add(i);
+                            }
+                            break;
                     }
                     break;
             }
@@ -171,7 +230,7 @@ public class SongControl : MonoBehaviour
             {
                 cycleCounter++;
                 beatCounter = 0;
-                Debug.Log("Starting cycle number: " + (cycleCounter + 1));
+                //Debug.Log("Starting cycle number: " + (cycleCounter + 1));
                 listenStateRhythm.Clear();
                 expectedTapTimings.Clear();
             }
@@ -211,7 +270,7 @@ public class SongControl : MonoBehaviour
             return source;
         }
 
-        Debug.LogWarning("All audio sources are busy. Consider increasing pool size.");
+        //Debug.LogWarning("All audio sources are busy. Consider increasing pool size.");
         return null;
     }
     private void PlaySound(AudioClip clip, double dspTime)
@@ -221,6 +280,7 @@ public class SongControl : MonoBehaviour
         {
             sourceToUse.clip = clip;
             sourceToUse.PlayScheduled(dspTime);
+            StartCoroutine(TemporaryChangeBackgroundColor());
         }
     }
 
@@ -242,4 +302,48 @@ public class SongControl : MonoBehaviour
         yield return new WaitWhile(() => source.isPlaying);
         audioSourcePool.Enqueue(source);
     }
+
+    public void SetDifficulty(string difficulty)
+    {
+        Difficulty = difficulty;
+    }
+
+    private IEnumerator TemporaryChangeBackgroundColor()
+    {
+        if (mainCamera != null)
+        {
+            // Initial delay of 200 milliseconds before color change
+            yield return new WaitForSeconds(0.3f);
+
+            // Change to the specific color (RGB values divided by 255)
+            mainCamera.backgroundColor = new Color(193f / 255f, 40f / 255f, 255f / 255f);
+
+            // Wait for another 200 milliseconds
+            yield return new WaitForSeconds(0.1f);
+
+            // Revert to the default color
+            mainCamera.backgroundColor = defaultBackgroundColor;
+        }
+    }
+
+    public void ChangeBackgroundColorOnPlayerTap()
+    {
+        StartCoroutine(TemporaryChangeBackgroundColorOnTap());
+    }
+
+    private IEnumerator TemporaryChangeBackgroundColorOnTap()
+    {
+        if (mainCamera != null)
+        {
+            // Change to the specific color for player tap
+            mainCamera.backgroundColor = new Color(47f / 255f, 246f / 255f, 186f / 255f);
+
+            // Wait for 200 milliseconds
+            yield return new WaitForSeconds(0.1f);
+
+            // Revert to the default color
+            mainCamera.backgroundColor = defaultBackgroundColor;
+        }
+    }
+
 }

@@ -38,8 +38,9 @@ public class PlayerInput : MonoBehaviour
 
         if (isTapPhase && Input.GetMouseButtonDown(0))
         {
+            PlayTapSound(tapSound);
             double tapTime = AudioSettings.dspTime;
-            Debug.Log("Tap detected at time: " + tapTime);
+            //Debug.Log("Tap detected at time: " + tapTime);
 
             List<double> expectedTimings = songControl.GetExpectedTapTimings();
             bool correctTap = expectedTimings.Any(timing => System.Math.Abs(timing - tapTime) <= correctTapBuffer);
@@ -47,21 +48,22 @@ public class PlayerInput : MonoBehaviour
             if (correctTap)
             {
                 score++;
-                Debug.Log($"Correct tap! Score: {score}");
+                //Debug.Log($"Correct tap! Score: {score}");
                 expectedTimings.Remove(expectedTimings.First(timing => System.Math.Abs(timing - tapTime) <= correctTapBuffer));
-                PlayTapSound(tapSound); // Play the tap sound using the pooled AudioSource system
+                //PlayTapSound(tapSound); // Play the tap sound using the pooled AudioSource system
                 totalScore++; // Increment the total score
             }
             else
             {
-                Debug.Log("Incorrect tap.");
-                PlayTapSound(tapSound);
+                //Debug.Log("Incorrect tap.");
+
                 totalScore--; // Decrement the total score
             }
             UpdateScoreText();
             playerTaps.Add(correctTap);
 
             ScoreKeeper.CurrentScore = totalScore; // Update the static score variable
+            songControl.ChangeBackgroundColorOnPlayerTap();
         }
 
 
@@ -75,22 +77,16 @@ public class PlayerInput : MonoBehaviour
 
     private void CheckScore()
     {
-        Debug.Log("Final Score for this cycle: " + score);
+        //Debug.Log("Final Score for this cycle: " + score);
         score = 0; // Reset the score for the next cycle
     }
 
     private void PlayTapSound(AudioClip clip)
     {
         AudioSource sourceToUse = GetPooledAudioSource();
-        if (sourceToUse != null)
-        {
-            Debug.Log("Playing tap sound on source: " + sourceToUse.GetInstanceID());
-            sourceToUse.PlayOneShot(clip);
-        }
-        else
-        {
-            Debug.LogWarning("No audio source available to play tap sound");
-        }
+
+        sourceToUse.PlayOneShot(clip);
+
     }
 
     private AudioSource GetPooledAudioSource()
@@ -103,7 +99,7 @@ public class PlayerInput : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("No audio source available to play tap sound");
+            //Debug.LogWarning("No audio source available to play tap sound");
             return null;
         }
     }
@@ -116,9 +112,9 @@ public class PlayerInput : MonoBehaviour
             AudioSource newSource = gameObject.AddComponent<AudioSource>();
             newSource.playOnAwake = false;
             audioSourcePool.Enqueue(newSource);
-            Debug.Log("Added AudioSource to pool: " + newSource.GetInstanceID());
+            //Debug.Log("Added AudioSource to pool: " + newSource.GetInstanceID());
         }
-        Debug.Log("Total AudioSources in pool: " + audioSourcePool.Count);
+        //Debug.Log("Total AudioSources in pool: " + audioSourcePool.Count);
     }
     private void UpdateScoreText()
     {
@@ -134,17 +130,18 @@ public class PlayerInput : MonoBehaviour
         {
             case "Easy":
                 correctTapBuffer = 0.2;
-                Debug.Log("Difficulty set to Easy");
+                //Debug.Log("Difficulty set to Easy");
                 break;
             case "Normal":
                 correctTapBuffer = 0.15;
-                Debug.Log("Difficulty set to Normal");
+                //Debug.Log("Difficulty set to Normal");
                 break;
             case "Expert":
                 correctTapBuffer = 0.1;
-                Debug.Log("Difficulty set to Expert");
+                //Debug.Log("Difficulty set to Expert");
                 break;
         }
+        songControl.SetDifficulty(difficulty);
     }
     private IEnumerator RequeueAudioSource(AudioSource source)
     {
